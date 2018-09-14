@@ -10,7 +10,11 @@ from src.exif import Exif
 from src.printer import Printer
 
 printer = Printer()
-ignored_files = (".DS_Store", "Thumbs.db")
+ignored_files = (
+  ".DS_Store", 
+  "Thumbs.db", 
+  "ZbThumbnail.info",
+)
 
 
 class Phockup():
@@ -86,16 +90,16 @@ class Phockup():
             return True
         return False
 
-    def get_output_dir(self, date):
+    def get_output_dir(self, date, file):
         """
         Generate output directory path based on the extracted date and formatted using dir_format
         If date is missing from the exifdata the file is going to "unknown" directory
         unless user included a regex from filename or uses timestamp
         """
         try:
-            path = [self.output, date['date'].date().strftime(self.dir_format)]
+            path = [self.output, 'archiv', date['date'].date().strftime(self.dir_format)]
         except:
-            path = [self.output, 'unknown']
+            path = [self.output, 'unknown', os.path.dirname(os.path.abspath(file)).replace(self.input, '')]
 
         fullpath = os.path.sep.join(path)
 
@@ -177,11 +181,11 @@ class Phockup():
         exif_data = Exif(file).data()
         if exif_data and 'MIMEType' in exif_data and self.is_image_or_video(exif_data['MIMEType']):
             date = Date(file).from_exif(exif_data, self.timestamp, self.date_regex)
-            output = self.get_output_dir(date)
+            output = self.get_output_dir(date, None)
             target_file_name = self.get_file_name(file, date).lower()
             target_file_path = os.path.sep.join([output, target_file_name])
         else:
-            output = self.get_output_dir(False)
+            output = self.get_output_dir(False, file)
             target_file_name = os.path.basename(file)
             target_file_path = os.path.sep.join([output, target_file_name])
 
