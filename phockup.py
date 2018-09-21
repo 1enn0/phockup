@@ -20,11 +20,12 @@ def main(argv):
     move = False
     link = False
     date_regex = None
+    root_dir = ''
     dir_format = os.path.sep.join(['%Y', '%m', '%d'])
     timestamp = False
 
     try:
-        opts, args = getopt.getopt(argv[2:], "d:r:mlth", ["date=", "regex=", "move", "link", "timestamp", "help"])
+        opts, args = getopt.getopt(argv[2:], "d:r:mlth", ["date=", "regex=", "move", "link", "timestamp", "help", "root-dir="])
     except getopt.GetoptError:
         help(version)
         sys.exit(2)
@@ -54,6 +55,10 @@ def main(argv):
                 printer.error("Provided regex is invalid!")
                 sys.exit(2)
         
+        if opt in ("--root-dir"):
+            root_dir = arg
+            printer.line(f"Using {root_dir} as root directory!")
+        
         if opt in ("-t", "--timestamp"):
             timestamp = True
             printer.line("Using file's timestamp!")
@@ -70,6 +75,7 @@ def main(argv):
     return Phockup(
         argv[0], argv[1],
         dir_format=dir_format,
+        root_dir = root_dir,
         move=move,
         link=link,
         date_regex=date_regex,

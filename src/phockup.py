@@ -34,6 +34,7 @@ class Phockup():
         self.link = args.get('link', False)
         self.date_regex = args.get('date_regex', None)
         self.timestamp = args.get('timestamp', False)
+        self.root_dir = args.get('root_dir', '')
 
         self.check_directories()
         self.walk_directory()
@@ -96,10 +97,19 @@ class Phockup():
         If date is missing from the exifdata the file is going to "unknown" directory
         unless user included a regex from filename or uses timestamp
         """
+        if date and date['guessing']:
+            toplevel = 'archive_guessed'
+        else:
+            toplevel = 'archive'
+
         try:
-            path = [self.output, 'archiv', date['date'].date().strftime(self.dir_format)]
+            path = [self.output, toplevel, date['date'].date().strftime(self.dir_format)]
         except:
-            path = [self.output, 'unknown', os.path.dirname(os.path.abspath(file)).replace(self.input, '')]
+            if self.root_dir:
+                repl = self.root_dir
+            else:
+                repl = self.input
+            path = [self.output, 'unknown', os.path.dirname(os.path.abspath(file)).replace(repl, '')]
 
         fullpath = os.path.sep.join(path)
 
@@ -117,7 +127,7 @@ class Phockup():
                 '%04d' % date['date'].year,
                 '%02d' % date['date'].month,
                 '%02d' % date['date'].day,
-                '-',
+                '_',
                 '%02d' % date['date'].hour,
                 '%02d' % date['date'].minute,
                 '%02d' % date['date'].second,
@@ -181,7 +191,7 @@ class Phockup():
         exif_data = Exif(file).data()
         if exif_data and 'MIMEType' in exif_data and self.is_image_or_video(exif_data['MIMEType']):
             date = Date(file).from_exif(exif_data, self.timestamp, self.date_regex)
-            output = self.get_output_dir(date, None)
+            output = self.get_output_dir(date, file)
             target_file_name = self.get_file_name(file, date).lower()
             target_file_path = os.path.sep.join([output, target_file_name])
         else:

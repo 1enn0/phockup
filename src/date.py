@@ -43,7 +43,7 @@ class Date():
             if datestr:
                 parsed_date = self.from_datestring(datestr)
         else:
-            parsed_date = {'date': None, 'subseconds': ''}
+            parsed_date = {'date': None, 'subseconds': '', 'guessing': False}
 
         if parsed_date.get("date") is not None:
             return parsed_date
@@ -72,7 +72,8 @@ class Date():
                 parsed_date_time = None
         return {
             'date': parsed_date_time,
-            'subseconds': subseconds
+            'subseconds': subseconds,
+            'guessing': False
         }
 
     def from_filename(self, user_regex, timestamp=None):
@@ -95,7 +96,8 @@ class Date():
             if date:
                 return {
                     'date': date,
-                    'subseconds': ''
+                    'subseconds': '',
+                    'guessing': True
                 }
             
         if timestamp: return self.from_timestamp()    
@@ -104,7 +106,8 @@ class Date():
         date = datetime.fromtimestamp(os.path.getmtime(self.file))
         return {
             'date': date,
-            'subseconds': ''
+            'subseconds': '',
+            'guessing': True
         }
 
         
