@@ -8,14 +8,15 @@ import sys
 from src.date import Date
 from src.exif import Exif
 from src.printer import Printer
+from src.logger import Logger
 
 printer = Printer()
+logger = Logger()
 ignored_files = (
   ".DS_Store", 
   "Thumbs.db", 
   "ZbThumbnail.info",
 )
-
 
 class Phockup():
     def __init__(self, input, output, **args):
@@ -34,10 +35,15 @@ class Phockup():
         self.link = args.get('link', False)
         self.date_regex = args.get('date_regex', None)
         self.timestamp = args.get('timestamp', False)
-        self.root_dir = args.get('root_dir', '')
+        self.path_root = args.get('path_root', '')
 
         self.check_directories()
         self.walk_directory()
+
+        log_name = os.path.split(self.input)[1] + '.pickle'
+        printer.line(f'Saving log to {log_name}')
+        logger.save_to_disk(os.path.join(self.output, log_name))
+        
 
     def check_directories(self):
         """
@@ -65,6 +71,7 @@ class Phockup():
             files.sort()
             for filename in files:
                 if filename in ignored_files:
+                    logger.add_entry(os.path.join(root, filename), '', Logger.ACTION_IGNORE)
                     continue
 
                 file = os.path.join(root, filename)
@@ -97,19 +104,19 @@ class Phockup():
         If date is missing from the exifdata the file is going to "unknown" directory
         unless user included a regex from filename or uses timestamp
         """
-        if date and date['guessing']:
-            toplevel = 'archive_guessed'
-        else:
-            toplevel = 'archive'
+        toplevel = 'archive_guessed' if date and date['guessing'] else 'archive'
 
         try:
             path = [self.output, toplevel, date['date'].date().strftime(self.dir_format)]
         except:
-            if self.root_dir:
-                repl = self.root_dir
-            else:
-                repl = self.input
-            path = [self.output, 'unknown', os.path.dirname(os.path.abspath(file)).replace(repl, '')]
+            # keep relative path (from src root dir) , .e.g.
+            # root_dir/rel/path/bla.pdf ==> dst_dir/unknown/rel/path/bla.pdf
+            repl = self.path_root if self.path_root else self.input
+            if not repl.endswith(os.path.sep):
+                repl = repl + os.path.sep
+            rel_path_from_root = os.path.dirname(os.path.abspath(file)).replace(repl, '')
+            
+            path = [self.output, 'unknown', rel_path_from_root]
 
         fullpath = os.path.sep.join(path)
 
@@ -158,20 +165,24 @@ class Phockup():
         while True:
             if os.path.isfile(target_file):
                 if self.checksum(file) == self.checksum(target_file):
+                    logger.add_entry(file, target_file, Logger.ACTION_SKIP)
                     printer.line(' => skipped, duplicated file %s' % target_file)
                     break
             else:
                 if self.move:
                     try:
                         shutil.move(file, target_file)
+                        logger.add_entry(file, target_file, Logger.ACTION_MOVE)
                     except FileNotFoundError:
                         printer.line(' => skipped, no such file or directory')
                         break
                 elif self.link:
                     os.link(file, target_file)
+                    logger.add_entry(file, target_file, Logger.ACTION_LINK)
                 else:
                     try:
                         shutil.copy2(file, target_file)
+                        logger.add_entry(file, target_file, Logger.ACTION_COPY)
                     except FileNotFoundError:
                         printer.line(' => skipped, no such file or directory')
                         break
