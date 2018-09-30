@@ -1,4 +1,5 @@
 import pickle
+import datetime
 
 ACTIONS_STR = [
     'copy',
@@ -17,11 +18,22 @@ class Logger ():
     ACTION_IGNORE = ACTIONS_STR.index('ignore')
 
     def __init__ (self):
-        self.entries = []
+        self.entries = {}
 
-    def add_entry (self, src, dst, action):
+    def add_entry (self, hashsum, src, dst, action):
         assert action in [Logger.ACTION_COPY, Logger.ACTION_MOVE, Logger.ACTION_LINK, Logger.ACTION_SKIP, Logger.ACTION_IGNORE], "illegal action in Logger.add_entry()"
-        self.entries.append((src, dst, ACTIONS_STR[action]))
+        
+        entry = {
+            'src': src,
+            'dst': dst,
+            'action': ACTIONS_STR[action],
+            'timestamp': datetime.datetime.now(),
+        }
+
+        if hashsum in self.entries:
+            self.entries[hashsum].append(entry)
+        else:
+            self.entries[hashsum] = [entry]
 
     def save_to_disk (self, filename):
         with open(filename, 'wb') as f:

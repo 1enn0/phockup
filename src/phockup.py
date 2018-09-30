@@ -71,7 +71,8 @@ class Phockup():
             files.sort()
             for filename in files:
                 if filename in ignored_files:
-                    logger.add_entry(os.path.join(root, filename), '', Logger.ACTION_IGNORE)
+                    checksum = self.checksum(os.path.join(root, filename))
+                    logger.add_entry(checksum, os.path.join(root, filename), '', Logger.ACTION_IGNORE)
                     continue
 
                 file = os.path.join(root, filename)
@@ -161,28 +162,29 @@ class Phockup():
 
         suffix = 1
         target_file = target_file_path
+        checksum = self.checksum(file)
 
         while True:
             if os.path.isfile(target_file):
-                if self.checksum(file) == self.checksum(target_file):
-                    logger.add_entry(file, target_file, Logger.ACTION_SKIP)
+                if checksum == self.checksum(target_file):
+                    logger.add_entry(checksum, file, target_file, Logger.ACTION_SKIP)
                     printer.line(' => skipped, duplicated file %s' % target_file)
                     break
             else:
                 if self.move:
                     try:
                         shutil.move(file, target_file)
-                        logger.add_entry(file, target_file, Logger.ACTION_MOVE)
+                        logger.add_entry(checksum, file, target_file, Logger.ACTION_MOVE)
                     except FileNotFoundError:
                         printer.line(' => skipped, no such file or directory')
                         break
                 elif self.link:
                     os.link(file, target_file)
-                    logger.add_entry(file, target_file, Logger.ACTION_LINK)
+                    logger.add_entry(checksum, file, target_file, Logger.ACTION_LINK)
                 else:
                     try:
                         shutil.copy2(file, target_file)
-                        logger.add_entry(file, target_file, Logger.ACTION_COPY)
+                        logger.add_entry(checksum, file, target_file, Logger.ACTION_COPY)
                     except FileNotFoundError:
                         printer.line(' => skipped, no such file or directory')
                         break
