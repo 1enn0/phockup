@@ -21,11 +21,12 @@ def main(argv):
     link = False
     date_regex = None
     path_root = ''
+    output_log = False
     dir_format = os.path.sep.join(['%Y', '%m', '%d'])
     timestamp = False
 
     try:
-        opts, _ = getopt.getopt(argv[2:], "d:r:p:mlth", ["date=", "regex=", "path-root=", "move", "link", "timestamp", "help"])
+        opts, _ = getopt.getopt(argv[2:], "d:r:p:mloth", ["date=", "regex=", "path-root=", "move", "link", "output_log", "timestamp", "help"])
     except getopt.GetoptError:
         help(version)
         sys.exit(2)
@@ -51,6 +52,10 @@ def main(argv):
         if opt in ("-l", "--link"):
             link = True
             printer.line("Using link strategy!")
+
+        if opt in ("-o", "--output_log"):
+            output_log = True
+            printer.line("Exporting output log enabled!")
 
         if opt in ("-r", "--regex"):
             try:
@@ -78,6 +83,7 @@ def main(argv):
         path_root = path_root,
         move=move,
         link=link,
+        output_log=output_log,
         date_regex=date_regex,
         timestamp=timestamp
     )

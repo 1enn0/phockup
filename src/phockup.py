@@ -35,14 +35,16 @@ class Phockup():
         self.link = args.get('link', False)
         self.date_regex = args.get('date_regex', None)
         self.timestamp = args.get('timestamp', False)
+        self.output_log = args.get('output_log', False)
         self.path_root = args.get('path_root', '')
 
         self.check_directories()
         self.walk_directory()
 
-        log_name = os.path.split(self.input)[1] + '.pickle'
-        printer.line(f'Saving log to {log_name}')
-        logger.save_to_disk(os.path.join(self.output, log_name))
+        if self.output_log:
+            log_name = os.path.split(self.input)[1] + '.pickle'
+            printer.line(f'Saving log to {log_name}')
+            logger.save_to_disk(os.path.join(self.output, log_name))
         
 
     def check_directories(self):
@@ -162,10 +164,16 @@ class Phockup():
 
         suffix = 1
         target_file = target_file_path
-        checksum = self.checksum(file)
+        
+        if self.output_log:
+            checksum = self.checksum(file)
+        else:
+            checksum = ''
 
         while True:
             if os.path.isfile(target_file):
+                if not self.output_log:
+                    checksum = self.checksum(file)
                 if checksum == self.checksum(target_file):
                     logger.add_entry(checksum, file, target_file, Logger.ACTION_SKIP)
                     printer.line(' => skipped, duplicated file %s' % target_file)
