@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import shutil
 import sys
 import os
@@ -70,6 +71,18 @@ def test_walking_directory():
     assert len([name for name in os.listdir(dir2) if os.path.isfile(os.path.join(dir2, name))]) == 1
     assert len([name for name in os.listdir(dir3) if os.path.isfile(os.path.join(dir3, name))]) == 1
     shutil.rmtree('output', ignore_errors=True)
+
+
+def test_dry_run():
+    shutil.rmtree('output', ignore_errors=True)
+    Phockup('input', 'output', dry_run=True)
+    assert not os.path.isdir('output')
+    dir1='output/2017/01/01'
+    dir2='output/2017/10/06'
+    dir3='output/unknown'
+    assert not os.path.isdir(dir1)
+    assert not os.path.isdir(dir2)
+    assert not os.path.isdir(dir3)
 
 
 def test_is_image_or_video(mocker):
@@ -174,7 +187,7 @@ def test_process_image_unknown(mocker):
     Exif.data.return_value = {
         "MIMEType": "image/jpeg"
     }
-    Phockup('input', 'output').process_file("input/unknown.jpg")
+    Phockup('input', 'output').process_file("input/UNKNOWN.jpg")
     assert os.path.isfile("output/unknown/unknown.jpg")
     shutil.rmtree('output', ignore_errors=True)
 
@@ -275,3 +288,23 @@ def test_process_skip_ignored_file():
     assert not os.path.isfile("output/unknown/.DS_Store")
     shutil.rmtree('output', ignore_errors=True)
     shutil.rmtree('input_ignored', ignore_errors=True)
+
+
+def test_keep_original_filenames(mocker):
+    shutil.rmtree('output', ignore_errors=True)
+    mocker.patch.object(Phockup, 'check_directories')
+    mocker.patch.object(Phockup, 'walk_directory')
+    Phockup('input', 'output', original_filenames=True).process_file("input/exif.jpg")
+    assert os.path.isfile("output/2017/01/01/exif.jpg")
+    assert not os.path.isfile("output/2017/01/01/20170101-010101.jpg")
+    shutil.rmtree('output', ignore_errors=True)
+
+
+def test_keep_original_filenames_and_filenames_case(mocker):
+    shutil.rmtree('output', ignore_errors=True)
+    mocker.patch.object(Phockup, 'check_directories')
+    mocker.patch.object(Phockup, 'walk_directory')
+    Phockup('input', 'output', original_filenames=True).process_file("input/UNKNOWN.jpg")
+    assert os.path.isfile("output/2017/10/06/UNKNOWN.jpg")
+    assert not 'unknown.jpg' in os.listdir("output/2017/10/06")
+    shutil.rmtree('output', ignore_errors=True)

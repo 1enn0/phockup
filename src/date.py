@@ -24,24 +24,28 @@ class Date():
 
     def build(self, date_object):
         return datetime(date_object["year"], date_object["month"], date_object["day"],
-                        date_object["hour"], date_object["minute"], date_object["second"])
+                        date_object["hour"] if date_object.get("hour") else 0,
+                        date_object["minute"] if date_object.get("minute") else 0,
+                        date_object["second"] if date_object.get("second") else 0)
 
-    def from_exif(self, exif, timestamp=None, user_regex=None):
-        keys = ['SubSecCreateDate', 'SubSecDateTimeOriginal', 'CreateDate', 'DateTimeOriginal']
+    def from_exif(self, exif, timestamp=None, user_regex=None, date_field=None):
+        if date_field:
+            keys = date_field.split()
+        else:
+            keys = ['SubSecCreateDate', 'SubSecDateTimeOriginal', 'CreateDate', 'DateTimeOriginal']
 
         datestr = None
-        parsed_date = None
 
         for key in keys:
             if key in exif:
                 datestr = exif[key]
                 break
-        
-        if isinstance(datestr,str): #sometimes this returns an int
-            # sometimes exif data can return all zeros
-            # check to see if valid date first
-            if datestr:
-                parsed_date = self.from_datestring(datestr)
+
+        # sometimes exif data can return all zeros
+        # check to see if valid date first
+        # sometimes this returns an int
+        if datestr and isinstance(datestr, str) and not datestr.startswith('0000'):
+            parsed_date = self.from_datestring(datestr)
         else:
             parsed_date = {'date': None, 'subseconds': '', 'guessing': False}
 
@@ -81,13 +85,13 @@ class Date():
         # For this use a user provided regex if possible.
         # Otherwise assume a filename such as IMG_20160915_123456.jpg as default.
         default_regex = re.compile(
-            '.*[_-](?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})[_-]?(?P<hour>\d{2})(?P<minute>\d{2})(?P<second>\d{2})')
+            r'.*[_-](?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})[_-]?(?P<hour>\d{2})(?P<minute>\d{2})(?P<second>\d{2})')
         regex = user_regex or default_regex
         matches = regex.search(os.path.basename(self.file))
 
         if matches:
             try:
-                match_dir = matches.groupdict()
+                match_dir = matches.groupdict(default='0')
                 match_dir = dict([a, int(x)] for a, x in match_dir.items())  # Convert str to int
                 date = self.build(match_dir)
             except (KeyError, ValueError):

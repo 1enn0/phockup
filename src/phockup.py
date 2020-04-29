@@ -33,11 +33,13 @@ class Phockup():
         self.dir_format = args.get('dir_format', os.path.sep.join(['%Y', '%m', '%d']))
         self.move = args.get('move', False)
         self.link = args.get('link', False)
+        self.original_filenames = args.get('original_filenames', False)
         self.date_regex = args.get('date_regex', None)
         self.timestamp = args.get('timestamp', False)
         self.output_log = args.get('output_log', False)
         self.path_root = args.get('path_root', '')
-
+        self.date_field = args.get('date_field', False)
+        self.dry_run = args.get('dry_run', False)
         self.check_directories()
         self.walk_directory()
 
@@ -55,15 +57,14 @@ class Phockup():
         """
         if not os.path.isdir(self.input) or not os.path.exists(self.input):
             printer.error('Input directory "%s" does not exist or cannot be accessed' % self.input)
-            sys.exit(1)
             return
         if not os.path.exists(self.output):
             printer.line('Output directory "%s" does not exist, creating now' % self.output)
             try:
-                os.makedirs(self.output)
+                if not self.dry_run:
+                    os.makedirs(self.output)
             except Exception:
                 printer.error('Cannot create output directory. No write access!')
-                sys.exit(1)
 
     def walk_directory(self):
         """
@@ -123,15 +124,19 @@ class Phockup():
 
         fullpath = os.path.sep.join(path)
 
-        if not os.path.isdir(fullpath):
+        if not os.path.isdir(fullpath) and not self.dry_run:
             os.makedirs(fullpath)
 
         return fullpath
 
     def get_file_name(self, file, date):
         """
-        Generate file name based on exif data unless it is missing. Then use original file name
+        Generate file name based on exif data unless it is missing or
+        original filenames are required. Then use original file name
         """
+        if self.original_filenames:
+            return os.path.basename(file)
+
         try:
             filename = [
                 '%04d' % date['date'].year,
@@ -179,17 +184,17 @@ class Phockup():
                     printer.line(' => skipped, duplicated file %s' % target_file)
                     break
             else:
-                if self.move:
+                if self.move and not self.dry_run:
                     try:
                         shutil.move(file, target_file)
                         logger.add_entry(checksum, file, target_file, Logger.ACTION_MOVE)
                     except FileNotFoundError:
                         printer.line(' => skipped, no such file or directory')
                         break
-                elif self.link:
+                elif self.link and not self.dry_run:
                     os.link(file, target_file)
                     logger.add_entry(checksum, file, target_file, Logger.ACTION_LINK)
-                else:
+                elif not self.dry_run:
                     try:
                         shutil.copy2(file, target_file)
                         logger.add_entry(checksum, file, target_file, Logger.ACTION_COPY)
@@ -211,9 +216,11 @@ class Phockup():
         """
         exif_data = Exif(file).data()
         if exif_data and 'MIMEType' in exif_data and self.is_image_or_video(exif_data['MIMEType']):
-            date = Date(file).from_exif(exif_data, self.timestamp, self.date_regex)
+            date = Date(file).from_exif(exif_data, self.timestamp, self.date_regex, self.date_field)
             output = self.get_output_dir(date, file)
             target_file_name = self.get_file_name(file, date).lower()
+            if not self.original_filenames:
+                target_file_name = target_file_name.lower()
             target_file_path = os.path.sep.join([output, target_file_name])
         else:
             output = self.get_output_dir(False, file)
@@ -245,9 +252,10 @@ class Phockup():
             xmp_path = os.path.sep.join([output, xmp_target])
             printer.line('%s => %s' % (xmp_original, xmp_path))
 
-            if self.move:
-                shutil.move(xmp_original, xmp_path)
-            elif self.link:
-                os.link(xmp_original, xmp_path)
-            else:
-                shutil.copy2(xmp_original, xmp_path)
+            if not self.dry_run:
+                if self.move:
+                    shutil.move(xmp_original, xmp_path)
+                elif self.link:
+                    os.link(xmp_original, xmp_path)
+                else:
+                    shutil.copy2(xmp_original, xmp_path)

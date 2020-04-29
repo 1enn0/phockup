@@ -10,7 +10,7 @@ from src.help import help
 from src.phockup import Phockup
 from src.printer import Printer
 
-version = '1.5.5'
+version = '1.5.9'
 printer = Printer()
 
 
@@ -23,10 +23,13 @@ def main(argv):
     path_root = ''
     output_log = False
     dir_format = os.path.sep.join(['%Y', '%m', '%d'])
+    original_filenames = False
     timestamp = False
+    date_field = None
+    dry_run = False
 
     try:
-        opts, _ = getopt.getopt(argv[2:], "d:r:p:mloth", ["date=", "regex=", "path-root=", "move", "link", "output_log", "timestamp", "help"])
+        opts, args = getopt.getopt(argv[2:], "d:r:f:p:mlotywh", ["date=", "regex=", "path-root=", "move", "link", "original-names", "timestamp", "date-field=", "dry-run", "output_log", "help"])
     except getopt.GetoptError:
         help(version)
         sys.exit(2)
@@ -38,7 +41,7 @@ def main(argv):
 
         if opt in ("-d", "--date"):
             if not arg:
-                printer.print.error("Date format cannot be empty")
+                printer.error("Date format cannot be empty")
             dir_format = Date().parse(arg)
 
         if opt in ("-p", "--path-root"):
@@ -47,13 +50,17 @@ def main(argv):
 
         if opt in ("-m", "--move"):
             move = True
-            printer.line("Using move strategy!")
+            printer.line("Using move strategy")
 
         if opt in ("-l", "--link"):
             link = True
-            printer.line("Using link strategy!")
+            printer.line("Using link strategy")
 
-        if opt in ("-o", "--output_log"):
+        if opt in ("-o", "--original-names"):
+            original_filenames = True
+            printer.line("Using original filenames")
+
+        if opt in ("-w", "--output_log"):
             output_log = True
             printer.line("Exporting output log enabled!")
 
@@ -61,17 +68,25 @@ def main(argv):
             try:
                 date_regex = re.compile(arg)
             except:
-                printer.error("Provided regex is invalid!")
-                sys.exit(2)
-        
+                printer.error("Provided regex is invalid")
+
         if opt in ("-t", "--timestamp"):
             timestamp = True
-            printer.line("Using file's timestamp!")
-        
+            printer.line("Using file's timestamp")
+
+        if opt in ("-y", "--dry-run"):
+            dry_run = True
+            printer.line("Dry run only, not moving files only showing changes")
+
+        if opt in ("-f", "--date-field"):
+            if not arg:
+                printer.error("Date field cannot be empty")
+            date_field = arg
+            printer.line("Using as date field: %s" % date_field)
+
 
     if link and move:
-        printer.error("Can't use move and link strategy together!")
-        sys.exit(1)
+        printer.error("Can't use move and link strategy together")
 
     if len(argv) < 2:
         help(version)
@@ -85,7 +100,10 @@ def main(argv):
         link=link,
         output_log=output_log,
         date_regex=date_regex,
-        timestamp=timestamp
+        original_filenames=original_filenames,
+        timestamp=timestamp,
+        date_field=date_field,
+        dry_run=dry_run,
     )
 
 
