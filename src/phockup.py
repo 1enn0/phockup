@@ -107,11 +107,22 @@ class Phockup():
         If date is missing from the exifdata the file is going to "unknown" directory
         unless user included a regex from filename or uses timestamp
         """
-        toplevel = 'archive_guessed' if date and date['guessing'] else 'archive'
+        toplevel = 'archive'
 
-        try:
-            path = [self.output, toplevel, date['date'].date().strftime(self.dir_format)]
-        except:
+        if date and not date['guessing']:
+            try:
+                path = [self.output, toplevel, date['date'].date().strftime(self.dir_format)]
+            except:
+                # keep relative path (from src root dir) , .e.g.
+                # root_dir/rel/path/bla.pdf ==> dst_dir/unknown/rel/path/bla.pdf
+                repl = self.path_root if self.path_root else self.input
+                if not repl.endswith(os.path.sep):
+                    repl = repl + os.path.sep
+                rel_path_from_root = os.path.dirname(os.path.abspath(file)).replace(repl, '')
+                
+                path = [self.output, 'unknown', rel_path_from_root]
+
+        else:
             # keep relative path (from src root dir) , .e.g.
             # root_dir/rel/path/bla.pdf ==> dst_dir/unknown/rel/path/bla.pdf
             repl = self.path_root if self.path_root else self.input
