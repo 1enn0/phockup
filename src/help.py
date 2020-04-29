@@ -50,6 +50,8 @@ OPTIONS
         Instead of copying the process will make hard links to all files in INPUTDIR and place them in the OUTPUTDIR.
         This is useful when working with working structure and want to create YYYY/MM/DD structure to point to same files.
 
+    -o | --original-names
+        Organize the files in selected format or using the default year/month/day format but keep original filenames.
 
     -r | --regex
         Specify date format for date extraction from filenames if there is no EXIF date information.
@@ -63,5 +65,23 @@ OPTIONS
         If the user supplies a regex, it will be used if it finds a match in the filename.
         This option is intended as "last resort" since the file modified date may not be accurate, 
         nevertheless it can be useful if no other date information can be obtained.
+
+    -f | --date-field
+        Use a custom date extracted from the exif field specified.
+        To set multiple fields to try in order until finding a valid date,
+        use spaces to separate fields inside a string.
+
+        Example:
+            DateTimeOriginal
+            "DateTimeOriginal CreateDate FileModifyDate"
+
+        These fields are checked by default when this argument is not set:
+            "SubSecCreateDate SubSecDateTimeOriginal CreateDate DateTimeOriginal"
+
+        To get all date fields available for a file, do:
+            exiftool -time:all -mimetype -j <file>
+
+    -y | --dry-run
+        Don't move any files, just show which changes would be done.
 """.format(version=version,
            regex="(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})[_-]?(?P<hour>\d{2})\.(?P<minute>\d{2})\.(?P<second>\d{2})"))
